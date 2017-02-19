@@ -14,11 +14,14 @@ public class App
 {
     public static void main( String[] args ) throws FileNotFoundException
     {
+    	/*
     	FileInputStream in = new FileInputStream("test.java");
 
         // parse the file
         CompilationUnit cu = JavaParser.parse(in);
         System.out.println( "Hello World!" );
         System.out.println(cu.toString());
+    	*/
+    	System.out.println("HelloWorld");
     }
 }
