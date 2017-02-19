@@ -1,0 +1,37 @@
+package com.sjsu.cmpe202.umlparser;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
+
+public class UMLGenerator {
+	
+	private static final String yuml_URL = "https://yuml.me/diagram/scruffy/class/";  //URL of yuml 
+	private static String png_location = "src/test/output.png";
+	private static int byte_size = 2048;
+	
+	public UMLGenerator(){
+		System.out.println("Draw UML");
+	}
+	
+	public void generatePNG(){
+		try{
+			URL url = new URL(yuml_URL + "[A%7C-x:int;-y:int(*)]1-0..*[B],[A]-1[C],[A]-*[D]" + ".png");
+			InputStream istream = url.openStream();
+			OutputStream ostream = new FileOutputStream(png_location);
+			byte[] buffer = new byte[byte_size];
+			int length;
+
+			while ((length = istream.read(buffer)) != -1) {
+				ostream.write(buffer, 0, length);
+			}
+			istream.close();
+			ostream.close();
+		}
+		catch(IOException e){
+			e.printStackTrace();
+		}
+	}
+}

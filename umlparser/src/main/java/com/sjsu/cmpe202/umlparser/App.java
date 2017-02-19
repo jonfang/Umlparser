@@ -1,5 +1,12 @@
 package com.sjsu.cmpe202.umlparser;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+
+import com.github.javaparser.JavaParser;
+import com.github.javaparser.ast.CompilationUnit;
+import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
 
 /**
  * Hello world!
@@ -7,10 +14,9 @@ package com.sjsu.cmpe202.umlparser;
  */
 public class App 
 {
-    public static void main( String[] args ) 
-    {
-    	System.out.println("Hello World!");
-    	CodeParser parser = new CodeParser();
-    	
+    public static void main( String[] args ){
+    	//CodeParser parser = new CodeParser();
+    	UMLGenerator generator = new UMLGenerator();
+    	generator.generatePNG();
     }
 }
