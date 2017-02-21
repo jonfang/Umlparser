@@ -1,3 +1,5 @@
+ 
+
 import java.util.Collection;
 
 public class A {
@@ -13,3 +15,4 @@ public class A {
 	private Collection<D> d;
 	 
 }
+ 

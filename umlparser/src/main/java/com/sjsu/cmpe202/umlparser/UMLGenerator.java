@@ -16,9 +16,9 @@ public class UMLGenerator {
 		System.out.println("Draw UML");
 	}
 	
-	public void generatePNG(){
+	public void generatePNG(String yuml_string){
 		try{
-			URL url = new URL(yuml_URL + "[A%7C-x:int;-y:int(*)]1-0..*[B],[A]-1[C],[A]-*[D]" + ".png");
+			URL url = new URL(yuml_URL + yuml_string + ".png");
 			InputStream istream = url.openStream();
 			OutputStream ostream = new FileOutputStream(png_location);
 			byte[] buffer = new byte[byte_size];
