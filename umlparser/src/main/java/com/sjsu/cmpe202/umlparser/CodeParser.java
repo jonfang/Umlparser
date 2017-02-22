@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Stack;
 
 import com.github.javaparser.JavaParser;
 import com.github.javaparser.ast.CompilationUnit;
@@ -47,6 +48,7 @@ public class CodeParser {
 		}
 		for(String class_name:class_list){
 			variable_list.put(class_name, new ArrayList()); //Initialize variable list for each class
+			multi_map.put(class_name, new HashMap()); //Initialize multiplicity map
 		}
 		for(int i=0;i<cu_list.size();i++){
 			process(cu_list.get(i), class_list.get(i), variable_list);
@@ -57,8 +59,9 @@ public class CodeParser {
 		}
 		*/
         //process(cu);
-		construct();
-       
+		//construct();
+		get_multiplicity(); //passing in with unmodified lists
+        construct();
         
 	}
 	
@@ -137,15 +140,60 @@ public class CodeParser {
 		 } 
 	 }
 	 
-	 public void derive_multiplicity(){ //get multiplicity
-		 
-	 }
+	 public void get_multiplicity(){ //get multiplicity
+		 for(String class_name:class_list){
+			 //System.out.println(class_name);
+			 Stack<String> removal_stack = new Stack(); //stack that pops element that has relationships
+			 for(String attr:variable_list.get(class_name)){
+				 //System.out.println("===>"+attr);
+				 for(String c_name:class_list){
+					 if(!c_name.equals(class_name) && attr.contains(new String("<" + c_name + ">"))){
+						 //check if collection of objects
+						 //System.out.println(attr);
+						 removal_stack.push(attr);
+						 break;
+					 }
+					 else if(!c_name.equals(class_name) && attr.contains(c_name)){ //check single instance of object
+						 //System.out.println(attr);
+						 removal_stack.push(attr);
+						 break;
+					 }
+				 }
+				 /*
+				 while(!removal_stack.isEmpty()){
+					 variable_list.get(class_name).remove(removal_stack.pop());
+				 }
+				 */
+				 
+			}
+			 while(!removal_stack.isEmpty()){
+				 variable_list.get(class_name).remove(removal_stack.pop());
+			 }
+		}
+	}
 	 
-	 public void construct(){
+	 public void printList(){
 		 for(String class_name:class_list){
 			 System.out.println(class_name);
 			 System.out.println(variable_list.get(class_name));
 		 }
+	 }
+	 
+	 public void construct(){
+		 ArrayList<String> buffer_list = new ArrayList();
+		 for(String class_name:class_list){
+			 StringBuilder buffer = new StringBuilder();
+			 buffer.append("[" + class_name);
+			 if(!variable_list.get(class_name).isEmpty()){
+				 buffer.append("|");
+			 }
+			 for(String attr:variable_list.get(class_name)){
+				 buffer.append(attr);
+			 }
+			 buffer.append("]");
+			 buffer_list.add(buffer.toString());
+		 }
+		 yuml_string = new StringBuilder(String.join(",", buffer_list));
 		 /*
 		 for(String class_name:class_list){
 			 yuml_string.append("[" + class_name+"|");
