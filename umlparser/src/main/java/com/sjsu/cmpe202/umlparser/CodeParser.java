@@ -30,7 +30,7 @@ public class CodeParser {
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private List<String> class_list; //list that contains all the classes
 	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class
-	private HashMap<String, HashMap<String, Integer>> multi_map; //multiplicity map that stores class relations  
+	private HashMap<String, HashMap<String, String>> multi_map; //multiplicity map that stores class relations  
 	
 	public CodeParser(){
 		//initialize variables
@@ -60,8 +60,10 @@ public class CodeParser {
 		*/
         //process(cu);
 		//construct();
+		//printList();
 		get_multiplicity(); //passing in with unmodified lists
-        construct();
+        //printList();
+		construct();
         
 	}
 	
@@ -139,33 +141,35 @@ public class CodeParser {
 			}
 		 } 
 	 }
-	 
+	
 	 public void get_multiplicity(){ //get multiplicity
+		 /*
+		 for(String attr:variable_list.get("A")){
+			 System.out.println(attr);
+		 }
+		 */
 		 for(String class_name:class_list){
 			 //System.out.println(class_name);
 			 Stack<String> removal_stack = new Stack(); //stack that pops element that has relationships
 			 for(String attr:variable_list.get(class_name)){
 				 //System.out.println("===>"+attr);
 				 for(String c_name:class_list){
-					 if(!c_name.equals(class_name) && attr.contains(new String("<" + c_name + ">"))){
+					 if(!c_name.equals(class_name) && attr.contains("<") && attr.contains(">") && attr.substring(attr.indexOf("<"), attr.indexOf(">")+1).contains(c_name)){
 						 //check if collection of objects
-						 //System.out.println(attr);
+						 //System.out.println("Coll" + attr);
+						 multi_map.get(class_name).put(c_name,"*");
 						 removal_stack.push(attr);
-						 break;
+						 //break;
 					 }
 					 else if(!c_name.equals(class_name) && attr.contains(c_name)){ //check single instance of object
-						 //System.out.println(attr);
+						 //System.out.println("Single: " + attr);
+						 multi_map.get(class_name).put(c_name,"1");
 						 removal_stack.push(attr);
-						 break;
+						 //break;
 					 }
-				 }
-				 /*
-				 while(!removal_stack.isEmpty()){
-					 variable_list.get(class_name).remove(removal_stack.pop());
-				 }
-				 */
-				 
+				 } 
 			}
+			 //remove the classes atrributes that have multiplicity/relationship
 			 while(!removal_stack.isEmpty()){
 				 variable_list.get(class_name).remove(removal_stack.pop());
 			 }
@@ -181,6 +185,7 @@ public class CodeParser {
 	 
 	 public void construct(){
 		 ArrayList<String> buffer_list = new ArrayList();
+		 //***Construct the class with attributes and methods
 		 for(String class_name:class_list){
 			 StringBuilder buffer = new StringBuilder();
 			 buffer.append("[" + class_name);
@@ -193,16 +198,64 @@ public class CodeParser {
 			 buffer.append("]");
 			 buffer_list.add(buffer.toString());
 		 }
-		 yuml_string = new StringBuilder(String.join(",", buffer_list));
-		 /*
-		 for(String class_name:class_list){
-			 yuml_string.append("[" + class_name+"|");
-			 for(String var: variable_list.get(class_name)){
-				 yuml_string.append(var);
-			 }
-			 yuml_string.append("]"+",");
+		 //***Construct the relationships and multiplicity
+		 
+		 List<String> tmp_list = new ArrayList();
+		 List<String> multi_list = new ArrayList();
+		 Stack<String> stack = new Stack();
+		 for(String x:multi_map.keySet()){
+			for(String y:multi_map.get(x).keySet()){
+				tmp_list.add(x + "-" + multi_map.get(x).get(y) + y);
+				//System.out.println(x + "-" + multi_map.get(x).get(y) + y);
+			}
 		 }
-		 */
+		 //construct multiplicity list
+		 int class_len = class_list.get(0).length(); //get the length of the class string
+		 for(int i=0;i<tmp_list.size();i++){ //merge the list
+			 for(int j=i+1;j<tmp_list.size();j++){
+				 if(tmp_list.get(i).substring(0, class_len).equals(tmp_list.get(j).substring(tmp_list.get(j).length()-class_len, tmp_list.get(j).length()))){
+					 if(tmp_list.get(j).contains("1")){
+						 multi_list.add(tmp_list.get(i).substring(0, class_len)+"1"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
+					 }
+					 else if(tmp_list.get(j).contains("*")){
+					 multi_list.add(tmp_list.get(i).substring(0, class_len)+"*"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
+					 }
+					 stack.push(tmp_list.get(i));
+					 tmp_list.remove(j);
+					 break; 
+				 }
+			 }
+		 }
+		 
+		 
+		 while(!stack.isEmpty()){
+			 tmp_list.remove(stack.pop());
+		 }
+		 for(String s:tmp_list){
+			 //reverse the strings to suit the requirement
+			 if(s.contains("1")){
+				 s = s.substring(s.length()-class_len, s.length())+"1"+"-"+s.substring(0,class_len); 
+			 }
+			 else if(s.contains("*")){
+				 s = s.substring(s.length()-class_len, s.length())+"*"+"-"+s.substring(0,class_len);
+			 }
+			 multi_list.add(s);
+		 }
+		 /*
+		 for(String s:multi_list){
+			 System.out.println(s);
+		 }*/
+		 
+		 //construct the yuml for multi table
+		 for(String s:multi_list){
+			 StringBuilder buffer = new StringBuilder();
+			 System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+			 buffer_list.add("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+			 
+		 }
+		 
+		 
+		 yuml_string = new StringBuilder(String.join(",", buffer_list));
 	 }
 	 
 	 public String generateString(){
