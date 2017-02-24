@@ -35,6 +35,8 @@ public class CodeParser {
 	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class/interface
 	private HashMap<String,List<String>> method_list; //method list correspond to mapped class/interface
 	private HashMap<String, HashMap<String, String>> multi_map; //multiplicity map that stores class relations  
+	private List<String> extends_implements_list;
+	private List<String> use_case_list; 
 	
 	public CodeParser(){
 		//initialize variables
@@ -46,6 +48,8 @@ public class CodeParser {
 		 variable_list = new HashMap();
 		 method_list = new HashMap();
 		 multi_map = new HashMap();
+		 extends_implements_list = new ArrayList();
+		 use_case_list = new ArrayList();
 		
 		//read sources files into cu_list
 		readSourceFiles(source_file,cu_list);
@@ -71,25 +75,37 @@ public class CodeParser {
 		
 
 		//printList();
-		//get_multiplicity(); //passing in with unmodified lists
+		get_multiplicity(); //passing in with unmodified lists
         //printList();
+		get_useCase();
 		construct();
         
 	}
 	
 	public void getClassOrInterface(Node node, List<String> class_list, int index){ //get class and interface
-		if (node instanceof TypeDeclaration) {
-		      // do something with this type declaration
-			 ClassOrInterfaceDeclaration class_interface = (ClassOrInterfaceDeclaration) node;
-			 if(class_interface.isInterface()){ //check if its an interface
-				 //System.out.println("Interface: " + class_interface.getName().toString());
-				 interface_list.add(class_interface.getName().toString());
-				 cu_map.put(index, class_interface.getName().toString());
+			if (node instanceof TypeDeclaration) {
+				// do something with this type declaration
+				ClassOrInterfaceDeclaration class_interface = (ClassOrInterfaceDeclaration) node;
+				if(class_interface.isInterface()){ //check if its an interface
+					//System.out.println("Interface: " + class_interface.getName().toString());
+					interface_list.add(class_interface.getName().toString());
+					cu_map.put(index, class_interface.getName().toString());
 			 }
-			 else{
+			 else{//is a class
 				 //System.out.println("Class: " + class_interface.getName().toString());
 				 class_list.add(class_interface.getName().toString());
 				 cu_map.put(index, class_interface.getName().toString());
+				 //handles the implements and extends here 
+				 //System.out.println("Extended: ");
+				 for(Node ex:class_interface.getExtendedTypes()){
+					 //System.out.println("["+ex + "]^-[" + class_interface.getName().toString() +"]");
+					 extends_implements_list.add("["+ex + "]^-[" + class_interface.getName().toString() +"]");
+				 }
+				 //System.out.println("Implemented: ");
+				 for(Node im:class_interface.getImplementedTypes()){
+					 //System.out.println("[<<interface>>;" + im + "]^-.-[" + class_interface.getName().toString() +"]");
+					 extends_implements_list.add("[<<interface>>;" + im + "]^-.-[" + class_interface.getName().toString() +"]");
+				 }
 			 }
 		}
 		for(Node child:node.getChildNodes()){
@@ -219,6 +235,18 @@ public class CodeParser {
 		}
 	}
 	 
+	 public void get_useCase(){
+		for(String class_interface_name:method_list.keySet()){
+			for(String method:method_list.get(class_interface_name)){
+				for(String interface_name:interface_list){
+					if(method.substring(method.indexOf("("), method.indexOf(")")+1).contains(interface_name)){
+						use_case_list.add("[" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
+					}
+				}
+			}
+		}
+	 }
+	 
 	 public void printList(){
 		 for(String class_name:class_list){
 			 System.out.println(class_name);
@@ -300,7 +328,7 @@ public class CodeParser {
 			 System.out.println(s);
 		 }*/
 		 
-		 //construct the yuml string for multi table
+		 //construct multiplicity table
 		 for(String s:multi_list){
 			 StringBuilder buffer = new StringBuilder();
 			 //System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
@@ -308,7 +336,15 @@ public class CodeParser {
 			 
 		 }
 		 
+		 //***construct the extends and implements
+		 for(String s:extends_implements_list){
+			 buffer_list.add(s);
+		 }
 		 
+		 //***construct use case table
+		 for(String s:use_case_list){
+			 buffer_list.add(s);
+		 }
 		 yuml_string = new StringBuilder(String.join(",", buffer_list));
 	 }
 	 
