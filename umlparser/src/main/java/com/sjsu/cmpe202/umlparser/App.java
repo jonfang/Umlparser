@@ -18,6 +18,7 @@ public class App
     	/*CodeParser parses source code and converts parsed code to yuml string
     	 *UMLGenerator converts yuml string to UML Diagram
     	 */
+
     	CodeParser parser = new CodeParser();
     	System.out.println(parser.generateString());
     	//CodeConverter converter = new CodeConverter();

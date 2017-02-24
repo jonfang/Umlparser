@@ -17,6 +17,7 @@ import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
+import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.body.TypeDeclaration;
 import com.github.javaparser.ast.body.VariableDeclarator;
 import com.github.javaparser.ast.visitor.VoidVisitorAdapter;
@@ -25,79 +26,120 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "src/test/uml-parser-test-1/";
+	private static final String source_file = "src/test/uml-parser-test-2/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
+	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
 	private List<String> class_list; //list that contains all the classes
-	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class
+	private List<String> interface_list; //list that contains all interfaces
+	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class/interface
+	private HashMap<String,List<String>> method_list; //method list correspond to mapped class/interface
 	private HashMap<String, HashMap<String, String>> multi_map; //multiplicity map that stores class relations  
 	
 	public CodeParser(){
 		//initialize variables
 		 yuml_string= new StringBuilder();
 		 cu_list = new ArrayList();
+		 cu_map = new HashMap();
 		 class_list = new ArrayList();
+		 interface_list = new ArrayList();
 		 variable_list = new HashMap();
+		 method_list = new HashMap();
 		 multi_map = new HashMap();
 		
-		//read sources files  
+		//read sources files into cu_list
 		readSourceFiles(source_file,cu_list);
 		//store classes
-		for(CompilationUnit cu:cu_list){
-			getClass(cu, class_list);
+		for(int i=0;i<cu_list.size();i++){
+			CompilationUnit cu = cu_list.get(i);
+			getClassOrInterface(cu, class_list,i);
 		}
 		for(String class_name:class_list){
 			variable_list.put(class_name, new ArrayList()); //Initialize variable list for each class
+			method_list.put(class_name, new ArrayList()); //Initialize method list for each class
 			multi_map.put(class_name, new HashMap()); //Initialize multiplicity map
 		}
+		
+		for(String interface_name:interface_list){
+			method_list.put(interface_name, new ArrayList()); 
+		}
+		
+		//process the contents for each source file
 		for(int i=0;i<cu_list.size();i++){
-			process(cu_list.get(i), class_list.get(i), variable_list);
+			process(cu_list.get(i), cu_map.get(i), variable_list);
 		}
-		/*
-		for(String c:class_list){
-			System.out.println(c);
-		}
-		*/
-        //process(cu);
-		//construct();
+		
+
 		//printList();
-		get_multiplicity(); //passing in with unmodified lists
+		//get_multiplicity(); //passing in with unmodified lists
         //printList();
 		construct();
         
 	}
 	
-	public void getClass(Node node, List<String> class_list){ //later modify this to interface
+	public void getClassOrInterface(Node node, List<String> class_list, int index){ //get class and interface
 		if (node instanceof TypeDeclaration) {
 		      // do something with this type declaration
-			 ClassOrInterfaceDeclaration class_name = (ClassOrInterfaceDeclaration) node;
-			 class_list.add(class_name.getName().toString());
+			 ClassOrInterfaceDeclaration class_interface = (ClassOrInterfaceDeclaration) node;
+			 if(class_interface.isInterface()){ //check if its an interface
+				 //System.out.println("Interface: " + class_interface.getName().toString());
+				 interface_list.add(class_interface.getName().toString());
+				 cu_map.put(index, class_interface.getName().toString());
+			 }
+			 else{
+				 //System.out.println("Class: " + class_interface.getName().toString());
+				 class_list.add(class_interface.getName().toString());
+				 cu_map.put(index, class_interface.getName().toString());
+			 }
 		}
 		for(Node child:node.getChildNodes()){
-			getClass(child, class_list);
+			getClassOrInterface(child, class_list, index);
 		}
 	}
 	
 
 	
-	public void process(Node node, String class_name, HashMap<String,List<String>> variable_list){
-		 if (node instanceof TypeDeclaration) {
+	public void process(Node node, String class_interface_name, HashMap<String,List<String>> variable_list){
+		
+		if (node instanceof TypeDeclaration) {
 		      // do something with this type declaration
 			 ClassOrInterfaceDeclaration dec = (ClassOrInterfaceDeclaration) node;
 			 //get class name
 		 } else if (node instanceof MethodDeclaration) {
 		      // do something with this method declaration
-			   System.out.println("Method: " + node);
+			   //System.out.println("Method: " + node);
+			   MethodDeclaration method = (MethodDeclaration)node;
+			   List<String> meth_list = method_list.get(class_interface_name);
+			   StringBuilder meth = new StringBuilder();
+			   if(method.isPrivate()){ //set visibility
+				   meth.append("-");
+			   }
+			   else if(method.isPublic()){
+				   meth.append("+");
+			   }
+			   if(!method.getType().toString().equals("void")){ //set type
+				   meth.append(method.getType().toString());
+			   }
+			   meth.append(method.getName()); //set name
+			   meth.append("(");
+			   for(Parameter para:method.getParameters()){
+				   meth.append(para.toString().replace(" ", ":"));
+				   meth.append(",");
+			   }
+			   meth.replace(meth.length()-1, meth.length(), "");meth.append(")");
+			   //System.out.println(meth.toString());
+			   meth_list.add(meth.toString());
+			   
 		   } else if (node instanceof FieldDeclaration) {
 		      // do something with this field declaration
 			   FieldDeclaration field = (FieldDeclaration)node;
-			   List<String> var_list = variable_list.get(class_name);
+			   List<String> var_list = variable_list.get(class_interface_name);
 			   StringBuilder var = new StringBuilder();
 			   //set visibility
 			   if(field.isPrivate()){
 				   var.append("-");
 			   }
-			   else if(field.isProtected()){
+			   else if(field.isPublic()){
 				   var.append("+");
 			   }
 			   //get type
@@ -115,8 +157,9 @@ public class CodeParser {
 		   }
 		    // Do something with the node
 		    for (Node child : node.getChildNodes()){
-		    	process(child, class_name, variable_list);
+		    	process(child, class_interface_name, variable_list);
 		    }
+		    
 	}
 	 
 	 private void readSourceFiles(String path, List<CompilationUnit> cu_list){
@@ -189,12 +232,23 @@ public class CodeParser {
 		 for(String class_name:class_list){
 			 StringBuilder buffer = new StringBuilder();
 			 buffer.append("[" + class_name);
-			 if(!variable_list.get(class_name).isEmpty()){
+			 if(!variable_list.get(class_name).isEmpty()|| !method_list.get(class_name).isEmpty()){
 				 buffer.append("|");
 			 }
 			 for(String attr:variable_list.get(class_name)){
 				 buffer.append(attr);
 			 }
+			 for(String meth:method_list.get(class_name)){
+				 buffer.append(meth);
+			 }
+			 buffer.append("]");
+			 buffer_list.add(buffer.toString());
+		 }
+		 //***Construct the interface
+		 for(String interface_name:interface_list){
+			 StringBuilder buffer = new StringBuilder();
+			 buffer.append("[<<interface>>;" + interface_name);
+			 /*Do something if not empty*/
 			 buffer.append("]");
 			 buffer_list.add(buffer.toString());
 		 }
@@ -246,10 +300,10 @@ public class CodeParser {
 			 System.out.println(s);
 		 }*/
 		 
-		 //construct the yuml for multi table
+		 //construct the yuml string for multi table
 		 for(String s:multi_list){
 			 StringBuilder buffer = new StringBuilder();
-			 System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+			 //System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
 			 buffer_list.add("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
 			 
 		 }
