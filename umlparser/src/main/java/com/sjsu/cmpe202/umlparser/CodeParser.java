@@ -26,7 +26,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "src/test/uml-parser-test-2/";
+	private static final String source_file = "src/test/uml-parser-test-3/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
@@ -35,8 +35,9 @@ public class CodeParser {
 	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class/interface
 	private HashMap<String,List<String>> method_list; //method list correspond to mapped class/interface
 	private HashMap<String, HashMap<String, String>> multi_map; //multiplicity map that stores class relations  
-	private List<String> extends_implements_list;
-	private List<String> use_case_list; 
+	private List<String> extends_implements_list; //all the extends and implements strings
+	private List<String> use_case_list; //all the interface use cases 
+	private HashMap<String, String>set_get_list; //lists contains class to setter/getter mapping
 	
 	public CodeParser(){
 		//initialize variables
@@ -50,13 +51,14 @@ public class CodeParser {
 		 multi_map = new HashMap();
 		 extends_implements_list = new ArrayList();
 		 use_case_list = new ArrayList();
+		 set_get_list = new HashMap();
 		
 		//read sources files into cu_list
 		readSourceFiles(source_file,cu_list);
 		//store classes
 		for(int i=0;i<cu_list.size();i++){
 			CompilationUnit cu = cu_list.get(i);
-			getClassOrInterface(cu, class_list,i);
+			getClassOrInterface(cu, class_list,i); //get the classes and interfaces, extends/implements also handled here
 		}
 		for(String class_name:class_list){
 			variable_list.put(class_name, new ArrayList()); //Initialize variable list for each class
@@ -76,8 +78,10 @@ public class CodeParser {
 
 		//printList();
 		get_multiplicity(); //passing in with unmodified lists
-        //printList();
-		get_useCase();
+		get_useCase();  //get use case 
+		rm_protected(); //removed protected/ packaged variables
+		set_get();
+		//printList();
 		construct();
         
 	}
@@ -134,7 +138,7 @@ public class CodeParser {
 				   meth.append("+");
 			   }
 			   if(!method.getType().toString().equals("void")){ //set type
-				   meth.append(method.getType().toString());
+				   meth.append(method.getType().toString()+":");
 			   }
 			   meth.append(method.getName()); //set name
 			   meth.append("(");
@@ -142,9 +146,22 @@ public class CodeParser {
 				   meth.append(para.toString().replace(" ", ":"));
 				   meth.append(",");
 			   }
-			   meth.replace(meth.length()-1, meth.length(), "");meth.append(")");
+			   if(method.getParameters().isEmpty()){
+				   meth.append(")");
+			   }
+			   else{
+				   meth.replace(meth.length()-1, meth.length(), "");meth.append(")");
+			   }
 			   //System.out.println(meth.toString());
-			   meth_list.add(meth.toString());
+			   
+			   //handling get and sets
+			   if(meth.toString().contains("get")||meth.toString().contains("set")){
+				   //if its a getter or setter, ignore
+				   set_get_list.put(class_interface_name,meth.toString());
+			   }
+			   else{
+				   meth_list.add(meth.toString());
+			   }
 			   
 		   } else if (node instanceof FieldDeclaration) {
 		      // do something with this field declaration
@@ -247,10 +264,44 @@ public class CodeParser {
 		}
 	 }
 	 
+	 public void rm_protected(){
+		 Stack<String> removal_stack = new Stack();
+		 for(String class_name:class_list){
+			 for(int i=0;i<variable_list.get(class_name).size();i++){
+				 String attr = variable_list.get(class_name).get(i);	
+				 if(attr.substring(0,1).equals("+")||attr.substring(0,1).equals("-")){
+				 		//System.out.println(attr);
+				 }
+				 else{
+					 variable_list.get(class_name).remove(i);
+					 i--;
+				 }
+				} 
+		}
+	}
+	 
+	public void set_get(){
+		for(String key:set_get_list.keySet()){
+			for(String attr:variable_list.get(key)){
+				if(set_get_list.get(key).toLowerCase().contains(attr.substring(attr.indexOf(":")+1, attr.indexOf(";")))){
+					String new_attr = attr.replace("-", "+");
+					variable_list.get(key).add(0,new_attr);
+					variable_list.get(key).remove(attr);
+					break;
+				}
+			}
+		}
+	}
+	 
 	 public void printList(){
 		 for(String class_name:class_list){
-			 System.out.println(class_name);
-			 System.out.println(variable_list.get(class_name));
+			 System.out.println("Class: " + class_name);
+			 System.out.println("Variables: " + variable_list.get(class_name));
+			 System.out.println("Methods: " + method_list.get(class_name));
+		 }
+		 for(String interface_name:interface_list){
+			 System.out.println("Interface: " + interface_name);
+			 System.out.println("Methods: " + method_list.get(interface_name));
 		 }
 	 }
 	 
