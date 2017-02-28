@@ -77,7 +77,7 @@ public class CodeParser {
 		}
 		
 
-		//printList();
+		printList();
 		get_multiplicity(); //passing in with unmodified lists
 		get_useCase();  //get use case 
 		rm_protected(); //removed protected/ packaged variables
