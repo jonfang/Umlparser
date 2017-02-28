@@ -15,6 +15,7 @@ import com.github.javaparser.ast.Node;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.BodyDeclaration;
 import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
+import com.github.javaparser.ast.body.ConstructorDeclaration;
 import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
@@ -26,7 +27,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "src/test/uml-parser-test-2/";
+	private static final String source_file = "src/test/uml-parser-test-4/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
@@ -35,8 +36,9 @@ public class CodeParser {
 	private HashMap<String,List<String>> variable_list; //variable list correspond to mapped class/interface
 	private HashMap<String,List<String>> method_list; //method list correspond to mapped class/interface
 	private HashMap<String, HashMap<String, String>> multi_map; //multiplicity map that stores class relations  
-	private List<String> extends_implements_list;
-	private List<String> use_case_list; 
+	private List<String> extends_implements_list; //all the extends and implements strings
+	private List<String> use_case_list; //all the interface use cases 
+	private HashMap<String, String>set_get_list; //lists contains class to setter/getter mapping
 	
 	public CodeParser(){
 		//initialize variables
@@ -50,13 +52,14 @@ public class CodeParser {
 		 multi_map = new HashMap();
 		 extends_implements_list = new ArrayList();
 		 use_case_list = new ArrayList();
+		 set_get_list = new HashMap();
 		
 		//read sources files into cu_list
 		readSourceFiles(source_file,cu_list);
 		//store classes
 		for(int i=0;i<cu_list.size();i++){
 			CompilationUnit cu = cu_list.get(i);
-			getClassOrInterface(cu, class_list,i);
+			getClassOrInterface(cu, class_list,i); //get the classes and interfaces, extends/implements also handled here
 		}
 		for(String class_name:class_list){
 			variable_list.put(class_name, new ArrayList()); //Initialize variable list for each class
@@ -76,8 +79,10 @@ public class CodeParser {
 
 		//printList();
 		get_multiplicity(); //passing in with unmodified lists
-        //printList();
-		get_useCase();
+		get_useCase();  //get use case 
+		rm_protected(); //removed protected/ packaged variables
+		set_get();
+		//printList();
 		construct();
         
 	}
@@ -121,9 +126,33 @@ public class CodeParser {
 		      // do something with this type declaration
 			 ClassOrInterfaceDeclaration dec = (ClassOrInterfaceDeclaration) node;
 			 //get class name
-		 } else if (node instanceof MethodDeclaration) {
+		 }else if (node instanceof ConstructorDeclaration){
+			 ConstructorDeclaration construct = (ConstructorDeclaration)node;
+			 List<String> meth_list = method_list.get(class_interface_name);
+			 StringBuilder constr = new StringBuilder();
+			 if(construct.isPrivate()){ //set visibility
+				constr.append("-"); 
+			 }
+			 else if(construct.isPublic()){
+				 constr.append("+");
+			 }
+			 constr.append(construct.getName()); //set name
+			 constr.append("(");
+			 for(Parameter para:construct.getParameters()){
+				   constr.append(para.toString().replace(" ", ":"));
+				   constr.append(",");
+			 }
+			 if(construct.getParameters().isEmpty()){
+				 constr.append(")");
+			 }
+			 else{
+				 constr.replace(constr.length()-1, constr.length(), "");constr.append(")");
+			 }
+			 //System.out.println(class_interface_name + " Constructor: " + constr.toString());
+			 meth_list.add(constr.toString());
+		 }
+		 else if (node instanceof MethodDeclaration) {
 		      // do something with this method declaration
-			   //System.out.println("Method: " + node);
 			   MethodDeclaration method = (MethodDeclaration)node;
 			   List<String> meth_list = method_list.get(class_interface_name);
 			   StringBuilder meth = new StringBuilder();
@@ -133,18 +162,31 @@ public class CodeParser {
 			   else if(method.isPublic()){
 				   meth.append("+");
 			   }
-			   if(!method.getType().toString().equals("void")){ //set type
-				   meth.append(method.getType().toString());
-			   }
 			   meth.append(method.getName()); //set name
 			   meth.append("(");
 			   for(Parameter para:method.getParameters()){
 				   meth.append(para.toString().replace(" ", ":"));
 				   meth.append(",");
 			   }
-			   meth.replace(meth.length()-1, meth.length(), "");meth.append(")");
-			   //System.out.println(meth.toString());
-			   meth_list.add(meth.toString());
+			   if(method.getParameters().isEmpty()){
+				   meth.append(")");
+			   }
+			   else{
+				   meth.replace(meth.length()-1, meth.length(), "");meth.append(")");
+			   }
+			   //if(!method.getType().toString().equals("void")){ 
+			   meth.append(":" + method.getType().toString());  //set type
+			   //}
+			   //System.out.println(class_interface_name + " Method: " + meth.toString());
+			   
+			   //handling get and sets
+			   if(meth.toString().contains("get")||meth.toString().contains("set")){
+				   //if its a getter or setter, ignore
+				   set_get_list.put(class_interface_name,meth.toString());
+			   }
+			   else{
+				   meth_list.add(meth.toString());
+			   }
 			   
 		   } else if (node instanceof FieldDeclaration) {
 		      // do something with this field declaration
@@ -169,6 +211,10 @@ public class CodeParser {
 				   //*do check later here for multiple variables
 				   var.append(v+";");
 			   }
+			   if(var.toString().contains("=")){//clear up variables with initialization
+				   var = new StringBuilder(var.substring(0, var.indexOf("=")).trim() + ";");
+			   }
+			   //System.out.println(class_interface_name + " Variables : " + var.toString());
 			   var_list.add(var.toString());
 		   }
 		    // Do something with the node
@@ -212,7 +258,22 @@ public class CodeParser {
 			 Stack<String> removal_stack = new Stack(); //stack that pops element that has relationships
 			 for(String attr:variable_list.get(class_name)){
 				 //System.out.println("===>"+attr);
-				 for(String c_name:class_list){
+				 for(String c_name:class_list){ //check class
+					 if(!c_name.equals(class_name) && attr.contains("<") && attr.contains(">") && attr.substring(attr.indexOf("<"), attr.indexOf(">")+1).contains(c_name)){
+						 //check if collection of objects
+						 //System.out.println("Coll" + attr);
+						 multi_map.get(class_name).put(c_name,"*");
+						 removal_stack.push(attr);
+						 //break;
+					 }
+					 else if(!c_name.equals(class_name) && attr.contains(c_name)){ //check single instance of object
+						 //System.out.println("Single: " + attr);
+						 multi_map.get(class_name).put(c_name,"1");
+						 removal_stack.push(attr);
+						 //break;
+					 }
+				 }
+				 for(String c_name:interface_list){  //check interface
 					 if(!c_name.equals(class_name) && attr.contains("<") && attr.contains(">") && attr.substring(attr.indexOf("<"), attr.indexOf(">")+1).contains(c_name)){
 						 //check if collection of objects
 						 //System.out.println("Coll" + attr);
@@ -238,20 +299,81 @@ public class CodeParser {
 	 public void get_useCase(){
 		for(String class_interface_name:method_list.keySet()){
 			for(String method:method_list.get(class_interface_name)){
+				//System.out.println(method);
+				String checkString = new String(method.substring(method.indexOf("("), method.indexOf(")")+1));
 				for(String interface_name:interface_list){
-					if(method.substring(method.indexOf("("), method.indexOf(")")+1).contains(interface_name)){
-						use_case_list.add("[" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
+					if(checkString.contains(interface_name) && checkString.substring(1,checkString.indexOf(":")).equals(interface_name)){
+						if(interface_list.contains(class_interface_name)){
+							if(!use_case_list.contains("[<<interface>>;" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]")){
+								use_case_list.add("[<<interface>>;" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
+							}
+						}
+						else{
+							if(!use_case_list.contains("[" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]")){
+								use_case_list.add("[" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
+							}
+						}
 					}
 				}
 			}
 		}
 	 }
 	 
-	 public void printList(){
+	 public void rm_protected(){
+		 Stack<String> removal_stack = new Stack();
 		 for(String class_name:class_list){
-			 System.out.println(class_name);
-			 System.out.println(variable_list.get(class_name));
+			 for(int i=0;i<variable_list.get(class_name).size();i++){
+				 String attr = variable_list.get(class_name).get(i);	
+				 if(attr.substring(0,1).equals("+")||attr.substring(0,1).equals("-")){
+				 		//System.out.println(attr);
+				 }
+				 else{
+					 variable_list.get(class_name).remove(i);
+					 i--;
+				 }
+				} 
+		}
+	}
+	 
+	public void set_get(){
+		for(String key:set_get_list.keySet()){
+			for(String attr:variable_list.get(key)){
+				if(set_get_list.get(key).toLowerCase().contains(attr.substring(attr.indexOf(":")+1, attr.indexOf(";")))){
+					String new_attr = attr.replace("-", "+");
+					variable_list.get(key).add(0,new_attr);
+					variable_list.get(key).remove(attr);
+					break;
+				}
+			}
+		}
+	}
+	 
+	 public void printList(){
+		 System.out.println("=======Classes=======");
+		 for(String class_name:class_list){
+			 System.out.println("Class: " + class_name);
+			 System.out.println("Variables: " + variable_list.get(class_name));
+			 System.out.println("Methods: " + method_list.get(class_name));
 		 }
+		 System.out.println("=======Interfaces=======");
+		 for(String interface_name:interface_list){
+			 System.out.println("Interface: " + interface_name);
+			 System.out.println("Methods: " + method_list.get(interface_name));
+		 }
+		 System.out.println("=======Extends/Implements=======");
+		 for(String extend_impl:extends_implements_list){
+			 System.out.println(extend_impl);
+		 }
+		 System.out.println("=======Use Cases=======");
+		 for(String use_case:use_case_list){
+			 System.out.println(use_case);
+		 }
+		 System.out.println("=======Mutliplicity=======");
+		 for(String x:multi_map.keySet()){
+			for(String y:multi_map.get(x).keySet()){
+				System.out.println(x + "-" + multi_map.get(x).get(y) + y);
+			}
+		}
 	 }
 	 
 	 public void construct(){
@@ -266,9 +388,12 @@ public class CodeParser {
 			 for(String attr:variable_list.get(class_name)){
 				 buffer.append(attr);
 			 }
+			 buffer.append(String.join(";", method_list.get(class_name)));
+			 /*
 			 for(String meth:method_list.get(class_name)){
 				 buffer.append(meth);
 			 }
+			 */
 			 buffer.append("]");
 			 buffer_list.add(buffer.toString());
 		 }
@@ -276,7 +401,12 @@ public class CodeParser {
 		 for(String interface_name:interface_list){
 			 StringBuilder buffer = new StringBuilder();
 			 buffer.append("[<<interface>>;" + interface_name);
-			 /*Do something if not empty*/
+			 //interface cannot be displayed
+			 /*
+			 if(!method_list.get(interface_name).isEmpty()){
+				 buffer.append("|");
+				 buffer.append(String.join(";", method_list.get(interface_name)));
+			 }*/
 			 buffer.append("]");
 			 buffer_list.add(buffer.toString());
 		 }
@@ -284,6 +414,7 @@ public class CodeParser {
 		 
 		 List<String> tmp_list = new ArrayList();
 		 List<String> multi_list = new ArrayList();
+		 List<Integer> class_len_list = new ArrayList();
 		 Stack<String> stack = new Stack();
 		 for(String x:multi_map.keySet()){
 			for(String y:multi_map.get(x).keySet()){
@@ -292,6 +423,102 @@ public class CodeParser {
 			}
 		 }
 		 //construct multiplicity list
+		 
+		 for(int i=0;i<tmp_list.size();i++){ //merge the list
+			 String s1 = tmp_list.get(i);
+			 for(int j=i+1;j<tmp_list.size();j++){
+				 String s2 = tmp_list.get(j);
+				 if((s1.substring(0, s1.indexOf("-")).equals(s2.substring(s2.indexOf("-")+2,s2.length()))) && (s2.substring(0, s2.indexOf("-")).equals(s1.substring(s1.indexOf("-")+2,s1.length())))){
+					 if(s2.contains("1")){
+						 multi_list.add(s1.substring(0, s1.indexOf("-"))+"1"+s1.substring(s1.indexOf("-"),s1.length()));
+					 }
+					 else if(tmp_list.get(j).contains("*")){
+					 multi_list.add(s1.substring(0, s1.indexOf("-"))+"*"+s1.substring(s1.indexOf("-"),s1.length()));
+					 }
+					 stack.push(tmp_list.get(i));
+					 tmp_list.remove(j);
+					 break; 
+				 }
+			 }
+		 }
+		 
+		 while(!stack.isEmpty()){
+			 tmp_list.remove(stack.pop());
+		 }
+		 /*
+		 System.out.println("====Debug====");
+		 for(String s:multi_list){
+			 System.out.println(s);
+		 }
+		 for(String s:tmp_list){
+			 System.out.println(s);
+		 }
+		 */
+		 
+		 for(String s:tmp_list){
+			 //reverse the strings to suit the requirement
+			 if(s.contains("1")){
+				 s = s.substring(s.indexOf("1")+1, s.length())+"1"+"-"+s.substring(0,s.indexOf("-")); 
+			 }
+			 else if(s.contains("*")){
+				 s = s.substring(s.indexOf("*")+1, s.length())+"*"+"-"+s.substring(0,s.indexOf("-"));
+			 }
+			 multi_list.add(s);
+		 }
+		 /*
+		 for(String s:multi_list){
+			 System.out.println(s);
+		 }
+		 */
+		 
+		 //construct multiplicity table
+		 for(String s:multi_list){
+			 StringBuilder buffer = new StringBuilder();
+			 //System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+			 buffer.append("[");
+			 int i=0;
+			 for(;i<s.length();i++){
+				 if(s.charAt(i)=='*' || s.charAt(i)=='1' || s.charAt(i)=='-'){
+					 if(interface_list.contains(s.substring(0,i))){
+						 buffer.append("<<interface>>;" + s.substring(0,i));
+					 }
+					 else{
+						 buffer.append(s.substring(0,i));
+					 }
+					 break;
+				 }
+			 }
+			 buffer.append("]");
+			 int j = i;
+			 while(s.charAt(i)=='*' || s.charAt(i)=='1' || s.charAt(i)=='-'){ //skip to the next class
+				 i++;
+			 }
+			 buffer.append(s.substring(j,i));
+			 if(interface_list.contains(s.substring(i,s.length()))){
+				 buffer.append("[<<interface>>;" + s.substring(i,s.length())+"]");
+			 }
+			 else{
+				 buffer.append("[" + s.substring(i,s.length())+"]"); 
+			 }
+			 //System.out.println(buffer.toString());
+			 buffer_list.add(buffer.toString());
+			 
+		 }
+		 
+		 //***construct the extends and implements
+		 for(String s:extends_implements_list){
+			 buffer_list.add(s);
+		 }
+		 
+		 //***construct use case table
+		 for(String s:use_case_list){
+			 buffer_list.add(s);
+		 }
+		 yuml_string = new StringBuilder(String.join(",", buffer_list));
+	 }
+	 
+	 /*
+	  *  //construct multiplicity list
 		 int class_len = class_list.get(0).length(); //get the length of the class string
 		 for(int i=0;i<tmp_list.size();i++){ //merge the list
 			 for(int j=i+1;j<tmp_list.size();j++){
@@ -308,7 +535,10 @@ public class CodeParser {
 				 }
 			 }
 		 }
-		 
+		 System.out.println("====Debug====");
+		 for(String s:multi_list){
+			 System.out.println(s);
+		 }
 		 
 		 while(!stack.isEmpty()){
 			 tmp_list.remove(stack.pop());
@@ -323,10 +553,6 @@ public class CodeParser {
 			 }
 			 multi_list.add(s);
 		 }
-		 /*
-		 for(String s:multi_list){
-			 System.out.println(s);
-		 }*/
 		 
 		 //construct multiplicity table
 		 for(String s:multi_list){
@@ -347,6 +573,8 @@ public class CodeParser {
 		 }
 		 yuml_string = new StringBuilder(String.join(",", buffer_list));
 	 }
+	 
+	  */
 	 
 	 public String generateString(){
 		 return yuml_string.toString();
