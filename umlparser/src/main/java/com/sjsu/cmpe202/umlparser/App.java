@@ -22,8 +22,8 @@ public class App
     	CodeParser parser = new CodeParser();
     	System.out.println(parser.generateString());
     	//CodeConverter converter = new CodeConverter();
-    	//UMLGenerator generator = new UMLGenerator();
-    	//String yuml_string = converter.generateYUMLString();
-    	//generator.generatePNG(yuml_string);
+    	UMLGenerator generator = new UMLGenerator();
+    	String yuml_string = parser.generateString();
+    	generator.generatePNG(yuml_string);
     }
 }

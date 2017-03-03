@@ -27,7 +27,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "src/test/uml-parser-test-4/";
+	private static final String source_file = "C:/Users/User/UMLParser_2017/umlparser/src/test/uml-parser-test-5/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
@@ -77,12 +77,12 @@ public class CodeParser {
 		}
 		
 
-		printList();
+		//printList();
 		get_multiplicity(); //passing in with unmodified lists
 		get_useCase();  //get use case 
 		rm_protected(); //removed protected/ packaged variables
 		set_get();
-		//printList();
+		printList();
 		construct();
         
 	}
@@ -177,6 +177,22 @@ public class CodeParser {
 			   //if(!method.getType().toString().equals("void")){ 
 			   meth.append(":" + method.getType().toString());  //set type
 			   //}
+			   if(meth.toString().contains("main")){ //add main function use case here for test case 5
+				  for(Node n: method.getChildNodes()){
+					  String tmp_str = n.toString();
+					  if(tmp_str.contains("=")){
+						  System.out.println(class_interface_name);
+						  for(String interface_name:interface_list){
+							  if(tmp_str.substring(0, tmp_str.indexOf("=")).contains(interface_name)){
+								  System.out.println(interface_name);
+								  use_case_list.add("[" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
+							  }
+						  }
+					  }
+					  
+				  }
+			   }
+			   
 			   //System.out.println(class_interface_name + " Method: " + meth.toString());
 			   
 			   //handling get and sets
@@ -303,7 +319,7 @@ public class CodeParser {
 				String checkString = new String(method.substring(method.indexOf("("), method.indexOf(")")+1));
 				for(String interface_name:interface_list){
 					if(checkString.contains(interface_name) && checkString.substring(1,checkString.indexOf(":")).equals(interface_name)){
-						if(interface_list.contains(class_interface_name)){
+						if(interface_list.contains(class_interface_name)){//check whether its interface uses or class uses interface
 							if(!use_case_list.contains("[<<interface>>;" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]")){
 								use_case_list.add("[<<interface>>;" + class_interface_name + "]" + "uses -.->" + "[<<interface>>;"+ interface_name + "]");
 							}
@@ -386,7 +402,10 @@ public class CodeParser {
 				 buffer.append("|");
 			 }
 			 for(String attr:variable_list.get(class_name)){
-				 buffer.append(attr);
+				 //reformat string 
+				 String reformat_str = attr.substring(0,1) + attr.substring(attr.indexOf(":")+1,attr.indexOf(";"))+ ":" + attr.substring(1,attr.indexOf(":")) + ";";
+				 buffer.append(reformat_str);
+				 //buffer.append(attr);
 			 }
 			 buffer.append(String.join(";", method_list.get(class_name)));
 			 /*
