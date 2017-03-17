@@ -27,7 +27,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "C:/Users/User/UMLParser_2017/umlparser/src/test/uml-parser-test-5/";
+	private static final String source_file = "C:/Users/User/UMLParser_2017/umlparser/src/test/uml-parser-test-4/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
