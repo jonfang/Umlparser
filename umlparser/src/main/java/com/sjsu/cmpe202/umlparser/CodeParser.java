@@ -27,7 +27,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "C:/Users/User/UMLParser_2017/umlparser/src/test/uml-parser-test-5/";
+	private static final String source_file = "C:/Users/User/UMLParser_2017/umlparser/src/test/uml-parser-test-4/";
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
@@ -528,63 +528,64 @@ public class CodeParser {
 		 for(String s:extends_implements_list){
 			 buffer_list.add(s);
 		 }
-		 
-		 //***construct use case table
-		 for(String s:use_case_list){
-			 buffer_list.add(s);
-		 }
-		 yuml_string = new StringBuilder(String.join(",", buffer_list));
-	 }
-	 
-	 /*
-	  *  //construct multiplicity list
-		 int class_len = class_list.get(0).length(); //get the length of the class string
-		 for(int i=0;i<tmp_list.size();i++){ //merge the list
-			 for(int j=i+1;j<tmp_list.size();j++){
-				 if(tmp_list.get(i).substring(0, class_len).equals(tmp_list.get(j).substring(tmp_list.get(j).length()-class_len, tmp_list.get(j).length()))){
-					 if(tmp_list.get(j).contains("1")){
-						 multi_list.add(tmp_list.get(i).substring(0, class_len)+"1"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
+		 /*
+		  *  //construct multiplicity list
+			 int class_len = class_list.get(0).length(); //get the length of the class string
+			 for(int i=0;i<tmp_list.size();i++){ //merge the list
+				 for(int j=i+1;j<tmp_list.size();j++){
+					 if(tmp_list.get(i).substring(0, class_len).equals(tmp_list.get(j).substring(tmp_list.get(j).length()-class_len, tmp_list.get(j).length()))){
+						 if(tmp_list.get(j).contains("1")){
+							 multi_list.add(tmp_list.get(i).substring(0, class_len)+"1"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
+						 }
+						 else if(tmp_list.get(j).contains("*")){
+						 multi_list.add(tmp_list.get(i).substring(0, class_len)+"*"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
+						 }
+						 stack.push(tmp_list.get(i));
+						 tmp_list.remove(j);
+						 break; 
 					 }
-					 else if(tmp_list.get(j).contains("*")){
-					 multi_list.add(tmp_list.get(i).substring(0, class_len)+"*"+tmp_list.get(i).substring(class_len,tmp_list.get(i).length()));
-					 }
-					 stack.push(tmp_list.get(i));
-					 tmp_list.remove(j);
-					 break; 
 				 }
 			 }
-		 }
-		 System.out.println("====Debug====");
-		 for(String s:multi_list){
-			 System.out.println(s);
-		 }
-		 
-		 while(!stack.isEmpty()){
-			 tmp_list.remove(stack.pop());
-		 }
-		 for(String s:tmp_list){
-			 //reverse the strings to suit the requirement
-			 if(s.contains("1")){
-				 s = s.substring(s.length()-class_len, s.length())+"1"+"-"+s.substring(0,class_len); 
+			 System.out.println("====Debug====");
+			 for(String s:multi_list){
+				 System.out.println(s);
 			 }
-			 else if(s.contains("*")){
-				 s = s.substring(s.length()-class_len, s.length())+"*"+"-"+s.substring(0,class_len);
-			 }
-			 multi_list.add(s);
-		 }
-		 
-		 //construct multiplicity table
-		 for(String s:multi_list){
-			 StringBuilder buffer = new StringBuilder();
-			 //System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
-			 buffer_list.add("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
 			 
+			 while(!stack.isEmpty()){
+				 tmp_list.remove(stack.pop());
+			 }
+			 for(String s:tmp_list){
+				 //reverse the strings to suit the requirement
+				 if(s.contains("1")){
+					 s = s.substring(s.length()-class_len, s.length())+"1"+"-"+s.substring(0,class_len); 
+				 }
+				 else if(s.contains("*")){
+					 s = s.substring(s.length()-class_len, s.length())+"*"+"-"+s.substring(0,class_len);
+				 }
+				 multi_list.add(s);
+			 }
+			 
+			 //construct multiplicity table
+			 for(String s:multi_list){
+				 StringBuilder buffer = new StringBuilder();
+				 //System.out.println("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+				 buffer_list.add("[" + (s.substring(0,class_len) + "]" + (s.substring(class_len,s.length()-class_len) + "[" + (s.substring(s.length()-class_len, s.length()) + "]"))));
+				 
+			 }
+			 
+			 //***construct the extends and implements
+			 for(String s:extends_implements_list){
+				 buffer_list.add(s);
+			 }
+			 
+			 //***construct use case table
+			 for(String s:use_case_list){
+				 buffer_list.add(s);
+			 }
+			 yuml_string = new StringBuilder(String.join(",", buffer_list));
 		 }
 		 
-		 //***construct the extends and implements
-		 for(String s:extends_implements_list){
-			 buffer_list.add(s);
-		 }
+		  */
 		 
 		 //***construct use case table
 		 for(String s:use_case_list){
@@ -593,7 +594,7 @@ public class CodeParser {
 		 yuml_string = new StringBuilder(String.join(",", buffer_list));
 	 }
 	 
-	  */
+
 	 
 	 public String generateString(){
 		 return yuml_string.toString();
