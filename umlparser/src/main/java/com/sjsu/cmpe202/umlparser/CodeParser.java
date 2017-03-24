@@ -523,7 +523,6 @@ public class CodeParser {
 			 buffer_list.add(buffer.toString());
 			 
 		 }
-		 
 		 //***construct the extends and implements
 		 for(String s:extends_implements_list){
 			 buffer_list.add(s);
