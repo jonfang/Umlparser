@@ -9,7 +9,7 @@ import java.net.URL;
 public class UMLGenerator {
 	
 	private static final String yuml_URL = "https://yuml.me/diagram/scruffy/class/";  //URL of yuml 
-	private static String png_location = "C:/Users/User/UMLParser_2017/umlparser/src/test/output.png";
+	private static String png_location = "C:/Users/jfang/git/umlparser_compe202/umlparser/src/test/output.png";
 	private static int byte_size = 2048;
 	
 	public UMLGenerator(){
