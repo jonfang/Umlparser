@@ -27,7 +27,7 @@ import com.github.javaparser.ast.nodeTypes.NodeWithVariables;
 
 public class CodeParser {
 
-	private static final String source_file = "C:/Users/jfang/git/umlparser_compe202/umlparser/src/test/uml-parser-test-2/";
+	private static String source_file;
 	private StringBuilder yuml_string; //stores the resulted string for diagram generator
 	private List<CompilationUnit> cu_list; //stores AST trees of all source codes
 	private HashMap<Integer, String> cu_map; //class and interface mapping to AST tree cu_list
@@ -40,7 +40,9 @@ public class CodeParser {
 	private List<String> use_case_list; //all the interface use cases 
 	private HashMap<String, String>set_get_list; //lists contains class to setter/getter mapping
 	
-	public CodeParser(){
+	public CodeParser(String source_folder){
+		//set test case folder
+		 source_file = source_folder; 
 		//initialize variables
 		 yuml_string= new StringBuilder();
 		 cu_list = new ArrayList();
@@ -523,6 +525,7 @@ public class CodeParser {
 			 buffer_list.add(buffer.toString());
 			 
 		 }
+		 
 		 //***construct the extends and implements
 		 for(String s:extends_implements_list){
 			 buffer_list.add(s);
